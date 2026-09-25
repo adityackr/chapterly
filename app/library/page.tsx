@@ -23,7 +23,6 @@ import type { Course } from "@/lib/types";
 import { deleteCourse, getCourses, saveCourses } from "@/lib/storage";
 import CourseCard from "@/components/CourseCard";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -144,23 +143,29 @@ export default function LibraryPage() {
   return (
     <main className="mx-auto w-full max-w-6xl flex-1 p-4">
       {courses.length === 0 ? (
-        <Card className="mx-auto mt-16 max-w-md border-dashed text-center">
-          <CardHeader className="items-center">
-            <span className="flex size-12 items-center justify-center rounded-2xl bg-violet-600/10 text-violet-700 dark:text-violet-300">
-              <LibraryBig className="size-6" />
-            </span>
-            <CardTitle className="mt-2">No courses yet</CardTitle>
-            <CardDescription>
+        <Empty className="mt-16 border border-dashed">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <LibraryBig />
+            </EmptyMedia>
+            <EmptyTitle>No courses yet</EmptyTitle>
+            <EmptyDescription>
               Paste a YouTube link and we&apos;ll split it into lessons using its timestamps.
-            </CardDescription>
-            <Button nativeButton={false} render={<Link href="/add" />} className="mt-2 bg-violet-600 text-white hover:bg-violet-500">
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button nativeButton={false} render={<Link href="/add" />}>
               <Plus className="size-4" /> Add your first video
             </Button>
             <p className="text-xs text-muted-foreground">
-              You&apos;ll need a YouTube Data API key — set it in Settings (free tier is plenty).
+              You&apos;ll need a YouTube Data API key — set it in{" "}
+              <Link href="/settings" className="underline underline-offset-4 hover:text-primary">
+                Settings
+              </Link>{" "}
+              (free tier is plenty).
             </p>
-          </CardHeader>
-        </Card>
+          </EmptyContent>
+        </Empty>
       ) : (
         <>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
