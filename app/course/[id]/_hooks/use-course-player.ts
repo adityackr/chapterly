@@ -54,9 +54,28 @@ export function useCoursePlayer() {
     setProgress(course.id, { completedIds: nextCompleted, lastChapterId: nextActive, updatedAt: Date.now() });
   }
 
+  function completeThrough(targetIdx: number, base: string[]) {
+    if (!course || targetIdx <= 0) return base;
+    const idsToAdd = course.chapters.slice(0, targetIdx).map((c) => c.id);
+    const set = new Set(base);
+    for (const id of idsToAdd) set.add(id);
+    return [...set];
+  }
+
   function select(id: string) {
+    if (!course) return;
+    const currentIdx = course.chapters.findIndex((c) => c.id === activeId);
+    const targetIdx = course.chapters.findIndex((c) => c.id === id);
+    if (targetIdx < 0) return;
+    // Forward jump: auto-complete the chapter(s) being skipped.
+    // Backward jumps leave completion untouched.
+    let nextCompleted = completedIds;
+    if (currentIdx >= 0 ? targetIdx > currentIdx : targetIdx > 0) {
+      nextCompleted = completeThrough(targetIdx, completedIds);
+      setCompletedIds(nextCompleted);
+    }
     setActiveId(id);
-    persistProgress(completedIds, id);
+    persistProgress(nextCompleted, id);
   }
 
   function toggleComplete(id: string) {
@@ -71,7 +90,17 @@ export function useCoursePlayer() {
     if (!course) return;
     const j = activeIndex + dir;
     if (j < 0 || j >= course.chapters.length) return;
-    select(course.chapters[j].id);
+    if (dir === 1) {
+      // Next button: auto-complete current + everything before the target.
+      const nextCompleted = completeThrough(j, completedIds);
+      setCompletedIds(nextCompleted);
+      setActiveId(course.chapters[j].id);
+      persistProgress(nextCompleted, course.chapters[j].id);
+      return;
+    }
+    // Prev button: just navigate, never auto-complete.
+    setActiveId(course.chapters[j].id);
+    persistProgress(completedIds, course.chapters[j].id);
   }
 
   function handleSeek(t: number) {
@@ -83,8 +112,15 @@ export function useCoursePlayer() {
     });
     const target = course.chapters[idx];
     if (target && target.id !== activeId) {
+      // Forward scrub: auto-complete all chapters before the scrubbed-to time.
+      // Backward scrub leaves completion untouched.
+      let nextCompleted = completedIds;
+      if (idx > activeIndex) {
+        nextCompleted = completeThrough(idx, completedIds);
+        setCompletedIds(nextCompleted);
+      }
       setActiveId(target.id);
-      persistProgress(completedIds, target.id);
+      persistProgress(nextCompleted, target.id);
     }
   }
 
