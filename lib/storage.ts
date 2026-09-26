@@ -42,12 +42,23 @@ export function deleteCourse(id: string): void {
 
 export function getProgress(courseId: string): CourseProgress {
   if (typeof window === "undefined")
-    return { completedIds: [], lastChapterId: null, updatedAt: 0 };
-  return safeParse<CourseProgress>(localStorage.getItem(PROGRESS_PREFIX + courseId), {
-    completedIds: [],
-    lastChapterId: null,
-    updatedAt: 0,
-  });
+    return { completedIds: [], lastChapterId: null, updatedAt: 0, positions: {} };
+  const raw = safeParse<CourseProgress>(
+    localStorage.getItem(PROGRESS_PREFIX + courseId),
+    {
+      completedIds: [],
+      lastChapterId: null,
+      updatedAt: 0,
+    }
+  );
+  // Migrate old shapes: guarantee arrays/maps so resume lookups never crash.
+  return {
+    completedIds: Array.isArray(raw.completedIds) ? raw.completedIds : [],
+    lastChapterId: raw.lastChapterId ?? null,
+    updatedAt: typeof raw.updatedAt === "number" ? raw.updatedAt : 0,
+    positions:
+      raw.positions && typeof raw.positions === "object" ? raw.positions : {},
+  };
 }
 
 export function setProgress(courseId: string, progress: CourseProgress): void {

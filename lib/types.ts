@@ -20,6 +20,8 @@ export interface CourseProgress {
   completedIds: string[];
   lastChapterId: string | null;
   updatedAt: number;
+  /** Per-chapter resume positions: chapterId -> absolute video time in seconds. */
+  positions?: Record<string, number>;
 }
 
 export interface VideoMeta {

@@ -61,10 +61,14 @@ export interface UseVideoPlayerOptions {
   autoPlay?: boolean;
   /** Pause when playback naturally reaches the chapter end (auto-advance off). */
   pauseAtEnd?: boolean;
+  /** Absolute video time to resume from (within the chapter). Falls back to startSeconds. */
+  startAt?: number | null;
   /** Fired when the chapter ends through natural playback (not scrubbing). */
   onEnded?: () => void;
   /** Fired when the user scrubs to a time — parent follows by switching chapters. */
   onSeek?: (seconds: number) => void;
+  /** Throttled playback-position reports while watching — parent persists for resume. Null = chapter finished, clear saved position. */
+  onProgress?: (seconds: number | null) => void;
 }
 
 /**
@@ -80,8 +84,10 @@ export function useVideoPlayer({
   chapterKey,
   autoPlay = true,
   pauseAtEnd = false,
+  startAt = null,
   onEnded,
   onSeek,
+  onProgress,
 }: UseVideoPlayerOptions) {
   const mountRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<YTPlayer | null>(null);
@@ -89,28 +95,46 @@ export function useVideoPlayer({
   const lastTimeRef = useRef<number | null>(null);
   const endedFiredFor = useRef<string>("");
   const boundsRef = useRef({ startSeconds, endSeconds });
+  const startAtRef = useRef<number | null>(startAt);
   const onEndedRef = useRef(onEnded);
   const onSeekRef = useRef(onSeek);
+  const onProgressRef = useRef(onProgress);
   const pauseAtEndRef = useRef(pauseAtEnd);
+  const lastReportRef = useRef<{ wall: number; video: number }>({ wall: 0, video: -1e9 });
   useEffect(() => {
     boundsRef.current = { startSeconds, endSeconds };
+    startAtRef.current = startAt;
     onEndedRef.current = onEnded;
     onSeekRef.current = onSeek;
+    onProgressRef.current = onProgress;
     pauseAtEndRef.current = pauseAtEnd;
-  }, [startSeconds, endSeconds, onEnded, onSeek, pauseAtEnd]);
+  }, [startSeconds, endSeconds, startAt, onEnded, onSeek, onProgress, pauseAtEnd]);
 
   const [rateIdx, setRateIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
 
+  function resolveCueAt(): number {
+    const s = boundsRef.current.startSeconds;
+    const e = boundsRef.current.endSeconds;
+    const r = startAtRef.current;
+    if (r == null || !Number.isFinite(r)) return s;
+    // Ignore stale/tiny resumes and resumes past (or at) the chapter end.
+    if (r < s + 1) return s;
+    if (e != null && r >= e - 2) return s;
+    return r;
+  }
+
   const cueChapter = useCallback(() => {
     const p = playerRef.current;
     if (!p || !readyRef.current) return;
+    const cueAt = resolveCueAt();
     endedFiredFor.current = "";
-    lastTimeRef.current = startSeconds;
-    if (autoPlay) p.loadVideoById({ videoId, startSeconds });
-    else p.cueVideoById({ videoId, startSeconds });
+    lastTimeRef.current = cueAt;
+    lastReportRef.current = { wall: 0, video: -1e9 };
+    if (autoPlay) p.loadVideoById({ videoId, startSeconds: cueAt });
+    else p.cueVideoById({ videoId, startSeconds: cueAt });
     setIsPlaying(autoPlay);
-  }, [videoId, startSeconds, autoPlay]);
+  }, [videoId, autoPlay]);
 
   // Init player once (no endSeconds passed — we enforce it ourselves so scrubbing stays free)
   useEffect(() => {
@@ -172,7 +196,8 @@ export function useVideoPlayer({
     cueChapter();
   }, [chapterKey, startSeconds, endSeconds, cueChapter]);
 
-  // Unified poll: play-state mirror, seek detection, natural chapter-end detection
+  // Unified poll: play-state mirror, seek detection, natural chapter-end
+  // detection, plus throttled progress reports for resume.
   useEffect(() => {
     const id = setInterval(() => {
       const p = playerRef.current;
@@ -187,13 +212,16 @@ export function useVideoPlayer({
       }
       setIsPlaying(state === PLAYING);
       const last = lastTimeRef.current;
-      const { endSeconds: end } = boundsRef.current;
+      const { startSeconds: start, endSeconds: end } = boundsRef.current;
 
       if (last != null && Math.abs(t - last) > SEEK_JUMP) {
         // User scrubbed — follow them, never auto-advance.
         lastTimeRef.current = t;
         endedFiredFor.current = "";
         onSeekRef.current?.(t);
+        // A scrub is also a fresh resume point — persist it immediately.
+        if (end == null || t < end - 2) onProgressRef.current?.(t);
+        else onProgressRef.current?.(null);
         return;
       }
       if (
@@ -215,8 +243,45 @@ export function useVideoPlayer({
         onEndedRef.current?.();
       }
       lastTimeRef.current = t;
+      // Throttled resume report: at most ~every 4s while inside the chapter.
+      const inChapter = t >= start - 1 && (end == null || t < end - 2);
+      if (inChapter) {
+        const now = Date.now();
+        const prev = lastReportRef.current;
+        if (now - prev.wall > 4000 && Math.abs(t - prev.video) > 1) {
+          lastReportRef.current = { wall: now, video: t };
+          onProgressRef.current?.(t);
+        }
+      }
     }, 250);
     return () => clearInterval(id);
+  }, [chapterKey]);
+
+  // Flush the latest position when the tab closes so resume survives
+  // a browser quit. The callback writes to localStorage synchronously.
+  useEffect(() => {
+    function flush() {
+      const p = playerRef.current;
+      if (!p || !readyRef.current) return;
+      const { endSeconds: end } = boundsRef.current;
+      try {
+        const t = p.getCurrentTime();
+        if (end != null && t >= end - 2) {
+          onProgressRef.current?.(null);
+          return;
+        }
+        onProgressRef.current?.(t);
+      } catch {
+        /* noop */
+      }
+    }
+    window.addEventListener("pagehide", flush);
+    window.addEventListener("beforeunload", flush);
+    return () => {
+      flush();
+      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("beforeunload", flush);
+    };
   }, [chapterKey]);
 
   function nudge(by: number) {

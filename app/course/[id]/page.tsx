@@ -15,6 +15,9 @@ export default function CoursePage() {
     activeIndex,
     pct,
     completedIds,
+    resumeAt,
+    resumedFrom,
+    restartNonce,
     autoAdvance,
     setAutoAdvance,
     editing,
@@ -26,6 +29,8 @@ export default function CoursePage() {
     go,
     handleSeek,
     handleEnded,
+    handleProgress,
+    clearResume,
     handleChaptersChange,
   } = useCoursePlayer();
 
@@ -43,11 +48,16 @@ export default function CoursePage() {
           autoAdvance={autoAdvance}
           editing={editing}
           sidebarOpen={sidebarOpen}
+          resumeAt={resumeAt}
+          resumedFrom={resumedFrom}
+          restartNonce={restartNonce}
           toggleSidebar={toggleSidebar}
           toggleComplete={toggleComplete}
           go={go}
           handleSeek={handleSeek}
           handleEnded={handleEnded}
+          handleProgress={handleProgress}
+          clearResume={clearResume}
           handleChaptersChange={handleChaptersChange}
         />
         {sidebarOpen && (

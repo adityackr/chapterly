@@ -12,11 +12,16 @@ interface Props {
   autoAdvance: boolean;
   editing: boolean;
   sidebarOpen: boolean;
+  resumeAt: number | null;
+  resumedFrom: number | null;
+  restartNonce: number;
   toggleSidebar: () => void;
   toggleComplete: (id: string) => void;
   go: (dir: -1 | 1) => void;
   handleSeek: (t: number) => void;
   handleEnded: () => void;
+  handleProgress: (t: number | null) => void;
+  clearResume: () => void;
   handleChaptersChange: (chapters: Course["chapters"]) => void;
 }
 
@@ -27,11 +32,16 @@ export default function PlayerSection({
   autoAdvance,
   editing,
   sidebarOpen,
+  resumeAt,
+  resumedFrom,
+  restartNonce,
   toggleSidebar,
   toggleComplete,
   go,
   handleSeek,
   handleEnded,
+  handleProgress,
+  clearResume,
   handleChaptersChange,
 }: Props) {
   const active = activeIndex >= 0 ? course.chapters[activeIndex] : null;
@@ -46,14 +56,30 @@ export default function PlayerSection({
       {active ? (
         <>
           <VideoPlayer
+            key={`${course.videoId}:${restartNonce}`}
             videoId={course.videoId}
             startSeconds={active.startSeconds}
             endSeconds={active.endSeconds}
             chapterKey={active.id}
+            startAt={resumeAt}
             pauseAtEnd={!autoAdvance}
             onEnded={handleEnded}
             onSeek={handleSeek}
+            onProgress={handleProgress}
           />
+          {resumedFrom != null && (
+            <div className="mt-2 flex items-center justify-between gap-2 rounded-lg border border-dashed px-3 py-1.5 text-xs text-muted-foreground">
+              <span>
+                Resumed from{" "}
+                <span className="font-mono font-medium text-foreground">
+                  {formatTimestamp(resumedFrom)}
+                </span>
+              </span>
+              <Button variant="ghost" size="sm" onClick={clearResume} className="h-7 text-xs">
+                Start over
+              </Button>
+            </div>
+          )}
           <div className="mt-3 flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="font-mono text-xs text-muted-foreground">
