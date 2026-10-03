@@ -55,6 +55,15 @@ export function formatTimestamp(totalSeconds: number): string {
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
 
+/** Always HH:MM:SS (e.g. lesson durations). Rounds to nearest second, min 00:00:01 for positive spans. */
+export function formatDuration(totalSeconds: number): string {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+}
+
 /** True if a line looks like a chapter/timestamp entry (e.g. "00:00 Intro"). */
 export function isChapterLine(raw: string): boolean {
   const line = raw.trim().replace(/^[(<[]+/, "");

@@ -1,7 +1,7 @@
 "use client";
 
 import type { Chapter } from "@/lib/types";
-import { formatTimestamp } from "@/lib/youtube";
+import { formatDuration, formatTimestamp } from "@/lib/youtube";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,7 +59,7 @@ export default function ChapterSidebar({
                   </span>
                   <span className="mt-0.5 block pl-1 font-mono text-xs text-muted-foreground">
                     {c.endSeconds != null
-                      ? `${formatTimestamp(c.endSeconds)} • ${Math.max(1, Math.round(c.endSeconds - c.startSeconds))}s`
+                      ? `${formatTimestamp(c.endSeconds)} • ${formatDuration(Math.max(1, Math.round(c.endSeconds - c.startSeconds)))}`
                       : "until end"}
                   </span>
                 </span>
