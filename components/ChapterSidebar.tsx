@@ -2,6 +2,11 @@
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { Chapter } from '@/lib/types';
 import { formatDuration, formatTimestamp } from '@/lib/youtube';
 import { Check, Clock, Flag, Play } from 'lucide-react';
@@ -73,11 +78,24 @@ export default function ChapterSidebar({
 											<Play className="size-3" aria-hidden />
 											{formatTimestamp(c.startSeconds)}
 										</Badge>
-										<span
-											className={`truncate text-sm ${active ? 'font-semibold' : ''} ${done ? 'text-muted-foreground line-through' : ''}`}
+									<Tooltip>
+										<TooltipTrigger
+											render={
+												<span
+													className={`min-w-0 flex-1 line-clamp-2 text-sm break-words ${active ? 'font-semibold' : ''} ${done ? 'text-muted-foreground line-through' : ''}`}
+												>
+													{i + 1}. {c.title}
+												</span>
+											}
+										/>
+										<TooltipContent
+											side="right"
+											align="start"
+											className="max-w-xs"
 										>
 											{i + 1}. {c.title}
-										</span>
+										</TooltipContent>
+									</Tooltip>
 									</span>
 									<span className="mt-0.5 flex items-center gap-1.5 pl-1 font-mono text-xs text-muted-foreground">
 										{c.endSeconds != null ? (
