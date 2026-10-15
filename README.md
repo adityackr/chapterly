@@ -31,11 +31,12 @@ YouTube video and without uploads, accounts, or servers.
    No key or no timestamps? Enable **manual mode** and paste the chapter list
    yourself, one per line (`00:00 Intro`).
 3. **Learn lesson by lesson** — the course player (`/course/[id]`) shows lessons
-   in a sidebar and plays just that segment. Scrub freely with the native
-   controls (or ±10s buttons); the sidebar highlight follows you.
+   in a sidebar and plays just that segment. Scrub freely with the custom
+   seekbar (chapter ticks + hover preview) or the ±10s buttons; the sidebar
+   highlight follows you.
 4. **Track & resume** — check off lessons, edit / reorder / retime them, change
-   speed up to 2x, toggle auto-advance. Everything persists in `localStorage`,
-   so you resume exactly where you left off.
+   speed from 0.25x to 2x, toggle subtitles, toggle auto-advance. Everything
+   persists in `localStorage`, so you resume exactly where you left off.
 5. **Organize** — search and drag-to-reorder courses on the **Library** page
    (`/library`); the order is saved instantly.
 
@@ -51,9 +52,17 @@ YouTube video and without uploads, accounts, or servers.
   `(1:02:03) Deep dive`, `Intro - 00:00`; sorts + dedupes by start time.
 - ⚠️ Chapter warnings (fewer than 3 chapters, first chapter not at `00:00`).
 - ▶️ Segment playback with chapter-end enforcement + optional auto-advance.
+- 🎛️ Custom player chrome (YouTube's native controls are hidden): play/pause,
+  ±10s nudge, prev/next chapter, volume + mute, time display, fullscreen,
+  auto-hiding controls, click-and-drag scrubbing.
+- 🎞️ Chapter-segmented seekbar with divider ticks, hover tooltip (time +
+  chapter name + thumbnail preview), and a chapters jump menu.
+- ⏩ Playback speeds 0.25x–2x (video's real available rates), subtitle
+  on/off toggle, YouTube-managed Auto quality (see limits below).
+- ⌨️ Keyboard shortcuts: `Space`/`K` play, `J`/`L` ±10s, `←`/`→` ±5s,
+  `M` mute, `C` subtitles, `F` fullscreen.
 - 🆓 Free scrubbing: the sidebar follows manual seeks instead of fighting them.
 - ✅ Progress tracking with auto-complete rules (see below).
-- ⏩ Playback speeds 1x / 1.25x / 1.5x / 2x, ±10s nudge buttons.
 - ✏️ Lesson editor: rename, retime, add, delete, reorder.
 - 📚 Library with search (title, lesson name, video ID) and drag-to-reorder.
 - 🌗 Light / dark / system theming, responsive layout, collapsible sidebar.
@@ -76,6 +85,31 @@ Managed in `use-course-player.ts`:
 Manual toggle (`Mark done` / `✓ Done`, or the per-lesson checkbox) can always
 override the automatic state.
 
+## Custom player
+
+The course page renders its own player chrome over the YouTube embed
+(`components/VideoPlayer.tsx`, state from `components/hooks/use-video-player.ts`).
+YouTube's native controls are hidden (`controls: 0, disablekb: 1, fs: 0`), so
+everything below is our UI driving the IFrame API:
+
+| Control | How it works |
+| ------- | ------------ |
+| Play / pause | `playVideo()` / `pauseVideo()` — button, center overlay, click-on-video, `Space`/`K` |
+| Seekbar | Click-and-drag scrubbing via `seekTo()`; buffered (`getVideoLoadedFraction`) + played progress; divider ticks at each chapter start; `Home`/`←`/`→` keys work when focused |
+| Hover preview | Tooltip follows the cursor with timestamp, chapter name, and video thumbnail |
+| Speed | Menu of the video's real rates (`getAvailablePlaybackRates`, falls back to 0.25x–2x) via `setPlaybackRate()` |
+| Subtitles | Toggle via `loadModule` / `unloadModule("captions")` (`C` key); best-effort, needs caption tracks on the video |
+| Quality | **Auto only** — YouTube deprecated `setPlaybackQuality` / `getAvailableQualityLevels`, so manual resolution picks are no-ops; the menu says so instead of faking it |
+| Volume | Slider + mute (`getVolume` / `setVolume` / `mute` / `unMute`, `M` key) |
+| Chapters | Jump menu + prev/next-chapter buttons + "now playing" chip (click restarts the chapter) |
+| Fullscreen | Wrapper `requestFullscreen()` (`F` key); chrome auto-hides after 3 s while playing |
+
+Two honest platform limits (not UI gaps): exact-frame hover images require
+YouTube's private signed storyboard spec, which the official API doesn't expose —
+so hover shows the video thumbnail plus time/chapter, not the true frame. And
+resolution stays on Auto for the reason above. Both would only become "real"
+with self-hosted video files (MP4/HLS), not YouTube embeds.
+
 ## Tech stack
 
 | Layer | Choice |
@@ -84,7 +118,7 @@ override the automatic state.
 | Styling | Tailwind CSS v4 + shadcn (Base UI primitives, neutral theme) |
 | Theming | `next-themes` (light / dark / system) |
 | Fonts | Inter (UI) + Geist Mono (timestamps/code) via `next/font` |
-| Video playback | YouTube IFrame API via a custom `useVideoPlayer` wrapper (free scrub, seek detection, chapter-end enforcement) |
+| Video playback | YouTube IFrame API via a custom `useVideoPlayer` wrapper (free scrub, seek detection, chapter-end enforcement) + rich custom player chrome in `components/VideoPlayer.tsx` (native controls hidden) |
 | Video metadata | YouTube Data API v3 (`videos?part=snippet,contentDetails`) |
 | Storage | Browser `localStorage` only — courses (+ order), progress, API key, sidebar state |
 | Icons | Lucide (`lucide-react`) |
@@ -150,8 +184,11 @@ you skip the key, **manual mode** on the Add page always works.
 ### Learning
 
 - Click lessons in the sidebar, or use **Prev / Next**.
-- Use native YouTube scrubbing or the **±10s** buttons — the active lesson
-  highlight follows the playback position.
+- Scrub with the custom seekbar (drag or click; hover shows time + chapter +
+  thumbnail) or the **±10s** buttons — the active lesson highlight follows
+  the playback position.
+- Press `Space`/`K` to play/pause, `J`/`L` for ±10s, `←`/`→` for ±5s,
+  `M` to mute, `C` for subtitles, `F` for fullscreen.
 - **Mark done** toggles the current lesson; the footer shows overall `%`.
 - Toggle **auto-advance** in the footer: on = jump to next lesson at chapter end,
   off = pause at chapter end.
@@ -179,12 +216,14 @@ app/
     page.tsx               # API key form + key tutorial
     actions-client.ts      # key test helper
 components/
-  VideoPlayer.tsx          # player chrome (±10s, play/pause, speed)
+  VideoPlayer.tsx          # rich custom player chrome (controls, segmented
+                           # seekbar, hover preview, speed/subtitles/fullscreen)
   ChapterSidebar.tsx       # lesson list with active + done states
   ChapterEditor.tsx        # rename / retime / add / delete / reorder lessons
   CourseCard.tsx           # library card with progress bar
   hooks/
-    use-video-player.ts    # IFrame wrapper: cueing, seek detection, end detection
+    use-video-player.ts    # IFrame wrapper: cueing, seek detection, end detection,
+                           # duration/volume/rates/captions mirroring
     use-chapter-editor.ts  # editor state logic
   ui/                      # shadcn primitives (button, card, dialog, input, …)
 config/home-page.ts        # all landing-page copy in one place
@@ -210,6 +249,10 @@ lib/
   `getCurrentTime()` and fires `onEnded` when playback smoothly crosses
   `endSeconds`. Seeks are detected as time jumps (`> 2 s` between polls) and
   reported via `onSeek` without triggering auto-advance.
+- **Custom chrome**: native YouTube controls are hidden (`controls: 0`); the same
+  poll additionally mirrors play state, duration, volume/mute, buffered fraction,
+  and playback rate into React state for the custom control bar. Captions toggle
+  uses the (undocumented) `loadModule` / `unloadModule("captions")` module API.
 - **Re-cue guard**: when the active chapter changes, the player re-cues only if
   the current playback position is *outside* the new chapter's bounds — so
   scrub-initiated chapter switches don't restart the video.
@@ -256,6 +299,8 @@ your host's env vars. No database or server-side secrets are needed.
 - Embeds require network access to YouTube; ad-blockers can interfere with the
   IFrame API — disable them for the app if the player won't load.
 - Private, deleted, or embed-disabled videos can't be played or fetched.
+- Player quality is Auto-only and hover previews show the video thumbnail, not
+  the exact frame — both are YouTube embed-API limits (see Custom player).
 - YouTube chapter guidelines (≥ 3 chapters, first at `00:00`) are surfaced as
   warnings only — fewer/shifted chapters still work in the player.
 
