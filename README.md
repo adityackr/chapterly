@@ -60,7 +60,7 @@ YouTube video and without uploads, accounts, or servers.
 - ⏩ Playback speeds 0.25x–2x (video's real available rates), subtitle
   on/off toggle, YouTube-managed Auto quality (see limits below).
 - ⌨️ Keyboard shortcuts: `Space`/`K` play, `J`/`L` ±10s, `←`/`→` ±5s,
-  `M` mute, `C` subtitles, `F` fullscreen.
+  `↑`/`↓` volume, `M` mute, `C` subtitles, `F` fullscreen.
 - 🆓 Free scrubbing: the sidebar follows manual seeks instead of fighting them.
 - ✅ Progress tracking with auto-complete rules (see below).
 - ✏️ Lesson editor: rename, retime, add, delete, reorder.
@@ -188,7 +188,7 @@ you skip the key, **manual mode** on the Add page always works.
   thumbnail) or the **±10s** buttons — the active lesson highlight follows
   the playback position.
 - Press `Space`/`K` to play/pause, `J`/`L` for ±10s, `←`/`→` for ±5s,
-  `M` to mute, `C` for subtitles, `F` for fullscreen.
+  `↑`/`↓` for volume, `M` to mute, `C` for subtitles, `F` for fullscreen.
 - **Mark done** toggles the current lesson; the footer shows overall `%`.
 - Toggle **auto-advance** in the footer: on = jump to next lesson at chapter end,
   off = pause at chapter end.

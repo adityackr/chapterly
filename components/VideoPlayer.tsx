@@ -188,6 +188,16 @@ export default function VideoPlayer(props: Props) {
         nudge(e.key === "ArrowRight" ? 5 : 10);
         pokeChrome();
         break;
+      case "ArrowUp":
+        e.preventDefault();
+        setVolumeLevel((muted ? 0 : volume) + 5);
+        pokeChrome();
+        break;
+      case "ArrowDown":
+        e.preventDefault();
+        setVolumeLevel((muted ? 0 : volume) - 5);
+        pokeChrome();
+        break;
       case "m":
         toggleMute();
         break;
@@ -514,8 +524,8 @@ export default function VideoPlayer(props: Props) {
 
       <p className="mt-2 text-xs text-muted-foreground">
         Shortcuts: <Kbd>Space</Kbd>/<Kbd>K</Kbd> play · <Kbd>J</Kbd>/<Kbd>L</Kbd> ±10s ·{" "}
-        <Kbd>←</Kbd>/<Kbd>→</Kbd> ±5s · <Kbd>M</Kbd> mute · <Kbd>C</Kbd> subtitles ·{" "}
-        <Kbd>F</Kbd> fullscreen
+        <Kbd>←</Kbd>/<Kbd>→</Kbd> ±5s · <Kbd>↑</Kbd>/<Kbd>↓</Kbd> volume · <Kbd>M</Kbd> mute ·{" "}
+        <Kbd>C</Kbd> subtitles · <Kbd>F</Kbd> fullscreen
       </p>
     </div>
   );
