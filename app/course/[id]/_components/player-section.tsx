@@ -61,6 +61,7 @@ export default function PlayerSection({
             startSeconds={active.startSeconds}
             endSeconds={active.endSeconds}
             chapterKey={active.id}
+            chapters={course.chapters}
             startAt={resumeAt}
             pauseAtEnd={!autoAdvance}
             onEnded={handleEnded}

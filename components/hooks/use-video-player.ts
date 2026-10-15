@@ -112,6 +112,7 @@ export function useVideoPlayer({
 
   const [rateIdx, setRateIdx] = useState(0);
   const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const [currentTime, setCurrentTime] = useState(startSeconds);
 
   function resolveCueAt(): number {
     const s = boundsRef.current.startSeconds;
@@ -211,6 +212,7 @@ export function useVideoPlayer({
         return;
       }
       setIsPlaying(state === PLAYING);
+      setCurrentTime(t);
       const last = lastTimeRef.current;
       const { startSeconds: start, endSeconds: end } = boundsRef.current;
 
@@ -290,6 +292,21 @@ export function useVideoPlayer({
     try {
       const t = Math.max(0, p.getCurrentTime() + by);
       p.seekTo(t, true);
+      setCurrentTime(t);
+    } catch {
+      /* noop */
+    }
+  }
+
+  /** Absolute seek (e.g. restart the current chapter from the chip). The
+   *  poll loop detects the jump and notifies the parent via onSeek. */
+  function seekTo(seconds: number) {
+    const p = playerRef.current;
+    if (!p) return;
+    try {
+      const t = Math.max(0, seconds);
+      p.seekTo(t, true);
+      setCurrentTime(t);
     } catch {
       /* noop */
     }
@@ -316,5 +333,5 @@ export function useVideoPlayer({
     }
   }
 
-  return { mountRef, isPlaying, rateIdx, nudge, togglePlay, cycleRate };
+  return { mountRef, isPlaying, rateIdx, currentTime, nudge, seekTo, togglePlay, cycleRate };
 }
